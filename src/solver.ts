@@ -20,19 +20,21 @@ const outOfBounds = (vector: Vector2, width: number, height: number) => {
   return vector.x < 0 || vector.y < 0 || vector.x >= width || vector.y >= height;
 };
 
-const findEmptyCell = (board: Board, visited: Set<String>): Vector2 | null => {
+const findAllEmptyCells = (board: Board, visited: Set<String>): Vector2[] => {
+  const result: Vector2[] = [];
   const height = board.length;
   const width = board[0]!.length;
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (!visited.has(vectorHash({ x, y }))) {
-        return { x, y };
+      const position = { x, y };
+      if (!visited.has(vectorHash(position))) {
+        result.push(position);
       }
     }
   }
 
-  return null;
+  return result;
 };
 
 export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
@@ -50,7 +52,7 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
     }
   }
 
-  while (stack.length > 0) {
+  stackLoop: while (stack.length > 0) {
     const state = stack.pop()!;
     const currentPosition = state.currentWord.positions.at(-1);
     if (!currentPosition) continue;
@@ -68,72 +70,68 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
       const nextCharacter = game.board[newPosition.y]![newPosition.x]!;
       const newWord = state.currentWord.word + nextCharacter;
 
+      if (newWord.length > game.maxWordLength) continue;
+
+      let newVisited: Set<string>;
       const wordType = tree.checkWord(newWord);
-      switch (wordType) {
-        case "invalid":
+
+      if (wordType === "invalid") {
+        continue directionLoop;
+      } else if (
+        wordType === "partial" ||
+        (wordType === "word" && newWord.length < game.minWordLength)
+      ) {
+        newVisited = new Set(state.visited);
+        newVisited.add(newPositionHash);
+
+        // Board is full, but last word is partial, continue
+        if (newVisited.size === game.height * game.width) {
           continue directionLoop;
-        case "word":
-          if (newWord.length < game.minWordLength) {
-            // Same handling as in partial word
-            const newVisited = new Set(state.visited);
-            newVisited.add(newPositionHash);
+        }
 
-            // Board is full, but last word is partial, continue
-            if (newVisited.size === game.height * game.width) {
-              continue directionLoop;
-            }
+        const newState: SolverState = {
+          board: state.board,
+          currentWord: {
+            word: newWord,
+            positions: [...state.currentWord.positions, newPosition],
+          },
+          foundWords: state.foundWords,
+          visited: newVisited,
+        };
 
-            const newState: SolverState = {
-              board: state.board,
-              currentWord: {
-                word: newWord,
-                positions: [...state.currentWord.positions, newPosition],
-              },
-              foundWords: state.foundWords,
-              visited: newVisited,
-            };
+        stack.push(newState);
+      } else if (wordType === "word") {
+        newVisited = new Set(state.visited);
+        newVisited.add(newPositionHash);
 
-            stack.push(newState);
-            continue directionLoop;
-          }
-
-          const newVisited = new Set(state.visited);
-          newVisited.add(newPositionHash);
-
-          // Board is full, last word is valid word
-          if (newVisited.size === game.height * game.width) {
-            results.push(state);
-            continue directionLoop;
-          }
-
-          // We found word, but it is not max length
-          // Continue building this word to be longer
-          if (newWord.length < game.maxWordLength) {
-            const newState: SolverState = {
-              board: state.board,
-              currentWord: {
-                word: newWord,
-                positions: [...state.currentWord.positions, newPosition],
-              },
-              foundWords: state.foundWords,
-              visited: newVisited,
-            };
-
-            stack.push(newState);
-          }
-
-          // Add state where we start looking at the next empty cell
-          const nextStartPosition = findEmptyCell(game.board, newVisited);
-          if (!nextStartPosition) {
-            throw "Could not find next start position";
-          }
-          const nextStartCharacter = game.board[nextStartPosition.y]![nextStartPosition.x]!;
-          if (!nextStartCharacter) {
-            throw "Could not get next character";
-          }
-
+        // Board is full, last word is valid word
+        // Add to results and continue
+        if (newVisited.size === game.height * game.width) {
           const wordPositions = [...state.currentWord.positions];
           wordPositions.push(newPosition);
+
+          const newState: SolverState = {
+            board: state.board,
+            currentWord: {
+              word: "",
+              positions: [{ x: 0, y: 0 }],
+            },
+            foundWords: [...state.foundWords, { word: newWord, positions: wordPositions }],
+            visited: newVisited,
+          };
+          results.push(newState);
+          break stackLoop;
+        }
+
+        // Add states for all remaining empty cells
+        const wordPositions = [...state.currentWord.positions];
+        wordPositions.push(newPosition);
+
+        const emptyCells = findAllEmptyCells(game.board, newVisited);
+        for (const nextStartPosition of emptyCells) {
+          const nextStartCharacter = game.board[nextStartPosition.y]![nextStartPosition.x]!;
+          const nextStartVisited = new Set(newVisited);
+          nextStartVisited.add(vectorHash(nextStartPosition));
 
           const newState: SolverState = {
             board: state.board,
@@ -142,35 +140,27 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
               positions: [nextStartPosition],
             },
             foundWords: [...state.foundWords, { word: newWord, positions: wordPositions }],
+            visited: nextStartVisited,
+          };
+
+          stack.push(newState);
+        }
+
+        // We found word, but it is not max length
+        // Continue building this word to be longer
+        if (newWord.length < game.maxWordLength) {
+          const newState: SolverState = {
+            board: state.board,
+            currentWord: {
+              word: newWord,
+              positions: [...state.currentWord.positions, newPosition],
+            },
+            foundWords: state.foundWords,
             visited: newVisited,
           };
 
           stack.push(newState);
-
-          break;
-        case "partial":
-          if (newWord.length < game.maxWordLength) {
-            const newVisited = new Set(state.visited);
-            newVisited.add(newPositionHash);
-
-            // Board is full, but last word is partial, continue
-            if (newVisited.size === game.height * game.width) {
-              continue directionLoop;
-            }
-
-            const newState: SolverState = {
-              board: state.board,
-              currentWord: {
-                word: newWord,
-                positions: [...state.currentWord.positions, newPosition],
-              },
-              foundWords: state.foundWords,
-              visited: newVisited,
-            };
-
-            stack.push(newState);
-          }
-          break;
+        }
       }
     }
   }

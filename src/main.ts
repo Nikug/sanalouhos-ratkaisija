@@ -21,6 +21,19 @@ const main = () => {
     maxWordLength: 10,
   };
 
+  // const game: GameState = {
+  //   board: [
+  //     ["a", "a", "s", "i"],
+  //     ["i", "s", "a", "a"],
+  //     ["a", "a", "s", "i"],
+  //     ["i", "s", "a", "a"],
+  //   ],
+  //   width: 4,
+  //   height: 4,
+  //   minWordLength: 3,
+  //   maxWordLength: 10,
+  // };
+
   console.time("tree");
   const tree = new TrieTree();
   tree.insertMany(words);
@@ -30,7 +43,7 @@ const main = () => {
   const results = solve(game, tree);
   console.timeEnd("solve");
 
-  console.log(results);
+  console.log(results[0]?.foundWords.map((word) => word.word));
 };
 
 main();
