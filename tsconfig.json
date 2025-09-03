@@ -37,7 +37,8 @@
     "skipLibCheck": true,
     // Node specific
     "rewriteRelativeImportExtension": true,
-    "erasableSyntaxOnly": true
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true
   },
   "include": [
     "src/**/*.ts",
