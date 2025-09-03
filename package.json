@@ -12,8 +12,12 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/heap": "^0.2.34",
     "@types/node": "^24.3.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "heap": "^0.2.7"
   }
 }

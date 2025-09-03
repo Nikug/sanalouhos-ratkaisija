@@ -1,5 +1,6 @@
 import type { TrieTree } from "./tree.ts";
 import type { Board, GameState, SolverState, Vector2 } from "./types.ts";
+import Heap from "heap";
 
 const directions: Vector2[] = [
   { x: 0, y: -1 }, // up,
@@ -38,12 +39,17 @@ const findAllEmptyCells = (board: Board, visited: Set<String>): Vector2[] => {
 };
 
 export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
-  const stack: SolverState[] = [];
+  const heap = new Heap<SolverState>((a, b) => {
+    // Prioritize states with overall longer words
+    const aValue = a.visited.size / a.foundWords.length;
+    const bValue = b.visited.size / b.foundWords.length;
+    return bValue - aValue;
+  });
   const results: SolverState[] = [];
 
   for (let y = 0; y < game.height; y++) {
     for (let x = 0; x < game.width; x++) {
-      stack.push({
+      heap.push({
         currentWord: { word: game.board[y]![x]!, positions: [{ x, y }] },
         foundWords: [],
         board: game.board,
@@ -52,8 +58,10 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
     }
   }
 
-  stackLoop: while (stack.length > 0) {
-    const state = stack.pop()!;
+  let iterations = 0;
+  stackLoop: while (heap.size() > 0) {
+    iterations++;
+    const state = heap.pop()!;
     const currentPosition = state.currentWord.positions.at(-1);
     if (!currentPosition) continue;
 
@@ -62,14 +70,13 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
         x: currentPosition.x + direction.x,
         y: currentPosition.y + direction.y,
       };
-      const newPositionHash = vectorHash(newPosition);
+      if (outOfBounds(newPosition, game.width, game.height)) continue;
 
-      if (outOfBounds(newPosition, game.width, game.height) || state.visited.has(newPositionHash))
-        continue;
+      const newPositionHash = vectorHash(newPosition);
+      if (state.visited.has(newPositionHash)) continue;
 
       const nextCharacter = game.board[newPosition.y]![newPosition.x]!;
       const newWord = state.currentWord.word + nextCharacter;
-
       if (newWord.length > game.maxWordLength) continue;
 
       let newVisited: Set<string>;
@@ -99,7 +106,7 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
           visited: newVisited,
         };
 
-        stack.push(newState);
+        heap.push(newState);
       } else if (wordType === "word") {
         newVisited = new Set(state.visited);
         newVisited.add(newPositionHash);
@@ -143,7 +150,7 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
             visited: nextStartVisited,
           };
 
-          stack.push(newState);
+          heap.push(newState);
         }
 
         // We found word, but it is not max length
@@ -159,11 +166,12 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
             visited: newVisited,
           };
 
-          stack.push(newState);
+          heap.push(newState);
         }
       }
     }
   }
 
+  console.log("iterations:", iterations);
   return results;
 };

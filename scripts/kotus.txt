@@ -64466,8 +64466,6 @@ pukki	2	substantiivi	5*A
 pukkihyppy		substantiivi	
 pukkimokka		substantiivi	
 pukkinosturi		substantiivi	
-puklata		verbi	73
-puklu		substantiivi	1
 puksipuu		substantiivi	
 puksuttaa		verbi	53*C
 puksutus		substantiivi	39
