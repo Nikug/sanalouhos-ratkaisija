@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node src/main.ts",
     "dev": "node src/main.ts",
+    "perf": "node --prof src/main.ts",
+    "clear": "rm -rf *.log",
     "parse": "node scripts/parse.ts"
   },
   "author": "",
