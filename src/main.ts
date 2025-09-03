@@ -15,11 +15,22 @@ const main = () => {
       ["l", "k", "t", "l", "a"],
       ["i", "a", "i", "a", "s"],
     ],
+    width: 5,
+    height: 6,
+    minWordLength: 3,
+    maxWordLength: 10,
   };
 
+  console.time("tree");
   const tree = new TrieTree();
   tree.insertMany(words);
-  solve(game, tree);
+  console.timeEnd("tree");
+
+  console.time("solve");
+  const results = solve(game, tree);
+  console.timeEnd("solve");
+
+  console.log(results);
 };
 
 main();

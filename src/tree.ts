@@ -4,6 +4,8 @@ export interface TreeNode {
   isWord: boolean;
 }
 
+export type WordType = "invalid" | "word" | "partial";
+
 const characters = "abcdefghijklmnopqrstuvwxyzåäö";
 
 export class TrieTree {
@@ -23,10 +25,6 @@ export class TrieTree {
       const index = characters.indexOf(char);
       const isWord = i === word.length - 1;
 
-      if (index === -1) {
-        console.log(word);
-      }
-
       if (node.nodes[index]) {
         node = node.nodes[index];
         if (isWord) {
@@ -39,62 +37,19 @@ export class TrieTree {
     }
   }
 
-  public search(usedChars: string[], remainingChars: string[]): string[] {
-    const result: string[] = [];
+  public checkWord(word: string): WordType {
+    let node = this.root;
 
-    const testedChars = new Set<string>();
-
-    for (const char of remainingChars) {
-      if (testedChars.has(char)) continue;
-
-      const allowedChars = [...usedChars, char];
-      testedChars.add(char);
-
-      this.walk(this.root, [], result, allowedChars, usedChars.length + 1);
-    }
-
-    return result;
-  }
-
-  private walk(
-    node: TreeNode,
-    path: string[],
-    results: string[],
-    allowedChars: string[],
-    wordLength: number,
-  ): void {
-    // Base case
-    if (!node || path.length >= wordLength) {
-      return;
-    }
-
-    const allowedCharIndex = allowedChars.indexOf(node.character);
-    if (node.character !== "" && allowedCharIndex === -1) {
-      return;
-    }
-
-    let newAllowedChars = allowedChars;
-    if (allowedCharIndex !== -1) {
-      newAllowedChars = allowedChars.toSpliced(allowedCharIndex, 1);
-    }
-
-    // Pre recurse
-    if (node.character !== "") {
-      path.push(node.character);
-    }
-
-    if (node.isWord && path.length === wordLength) {
-      results.push(path.join(""));
-    }
-
-    // Recurse
-    for (const child of node.nodes) {
-      if (child && newAllowedChars.includes(child.character)) {
-        this.walk(child, path, results, newAllowedChars, wordLength);
+    for (let i = 0; i < word.length; i++) {
+      const char = word[i]!;
+      const index = characters.indexOf(char);
+      if (node.nodes[index]) {
+        node = node.nodes[index];
+      } else {
+        return "invalid";
       }
     }
 
-    // Post recurse
-    path.pop();
+    return node.isWord ? "word" : "partial";
   }
 }

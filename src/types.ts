@@ -7,6 +7,10 @@ export interface Vector2 {
 
 export interface GameState {
   board: Board;
+  width: number;
+  height: number;
+  minWordLength: number;
+  maxWordLength: number;
 }
 
 export interface Word {
@@ -18,4 +22,5 @@ export interface SolverState {
   board: Board;
   foundWords: Word[];
   currentWord: Word;
+  visited: Set<string>;
 }
