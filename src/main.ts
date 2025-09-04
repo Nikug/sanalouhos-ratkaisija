@@ -3,52 +3,12 @@ import wordsJson from "../scripts/words.json" with { type: "json" };
 import { TrieTree } from "./tree.ts";
 import { solve } from "./solver.ts";
 import { printSolution } from "./util.ts";
+import { games } from "./games.ts";
 
 const words: string[] = wordsJson;
 
 const main = () => {
-  const game: GameState = {
-    board: [
-      ["u", "p", "i", "o", "e"],
-      ["p", "l", "u", "s", "e"],
-      ["l", "a", "k", "p", "a"],
-      ["k", "a", "t", "b", "i"],
-      ["l", "k", "t", "l", "a"],
-      ["i", "a", "i", "a", "s"],
-    ],
-    width: 5,
-    height: 6,
-    minWordLength: 3,
-    maxWordLength: 10,
-  };
-
-  // const game: GameState = {
-  //   board: [
-  //     ["i", "o", "i", "m", "ä"],
-  //     ["v", "l", "k", "i", "t"],
-  //     ["t", "ö", "l", "k", "h"],
-  //     ["ä", "l", "l", "e", "ä"],
-  //     ["i", "h", "i", "t", "v"],
-  //     ["h", "n", "ö", "t", "y"],
-  //   ],
-  //   width: 5,
-  //   height: 6,
-  //   minWordLength: 3,
-  //   maxWordLength: 10,
-  // };
-
-  // const game: GameState = {
-  //   board: [
-  //     ["a", "a", "s", "i"],
-  //     ["i", "s", "a", "a"],
-  //     ["a", "a", "s", "i"],
-  //     ["i", "s", "a", "a"],
-  //   ],
-  //   width: 4,
-  //   height: 4,
-  //   minWordLength: 3,
-  //   maxWordLength: 10,
-  // };
+  const game = games[0]!;
 
   console.time("tree");
   const tree = new TrieTree();
