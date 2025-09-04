@@ -6,7 +6,7 @@ export const App = () => {
   const [count, setCount] = useState(0);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 p-8 text-white">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-900 p-8 text-white">
       <div className="mb-8 flex gap-8">
         <a href="https://vite.dev" target="_blank" rel="noopener noreferrer">
           <img

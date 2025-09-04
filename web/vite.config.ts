@@ -6,7 +6,16 @@ import eslint from 'vite-plugin-eslint2';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), eslint()],
+  plugins: [
+    react({
+      // @ts-expect-error bad typing
+      babel: {
+        plugins: ['babel-plugin-react-compiler'],
+      },
+    }),
+    tailwindcss(),
+    eslint(),
+  ],
   resolve: {
     alias: {
       '@': path.resolve('./src'),
