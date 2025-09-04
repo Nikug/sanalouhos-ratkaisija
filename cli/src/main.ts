@@ -1,4 +1,3 @@
-import type { GameState } from "./types.ts";
 import wordsJson from "../scripts/words.json" with { type: "json" };
 import { TrieTree } from "./tree.ts";
 import { solve } from "./solver.ts";
@@ -8,7 +7,7 @@ import { games } from "./games.ts";
 const words: string[] = wordsJson;
 
 const main = () => {
-  const game = games[0]!;
+  const game = games[1]!;
 
   console.time("tree");
   const tree = new TrieTree();
