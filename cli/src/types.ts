@@ -16,6 +16,7 @@ export interface GameState {
 export interface Word {
   word: string;
   positions: Vector2[];
+  positionHashes: string[];
 }
 
 export interface SolverState {
@@ -23,4 +24,10 @@ export interface SolverState {
   foundWords: Word[];
   currentWord: Word;
   visited: Set<string>;
+}
+
+export interface ArrangementState {
+  remainingWords: Word[];
+  usedWords: Word[];
+  usedPositions: Set<string>;
 }
