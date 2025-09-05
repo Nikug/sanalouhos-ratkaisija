@@ -1,11 +1,11 @@
-/* eslint-disable @eslint-react/no-array-index-key */
 import { useMemo, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Button } from "./components/Button";
-import words from "./assets/fullWords.json";
+import words from "./assets/words.json";
+import fullWords from "./assets/fullWords.json";
 import { TrieTree } from "./utils/tree";
 import { solve } from "./utils/solver";
-import { printSolution } from "./utils/util";
-import type { SolverState, Vector2 } from "./types/types";
+import type { SolverState } from "./types/types";
+import { Solution } from "./components/Solution";
 
 const rows = Array.from({ length: 6 }, (_, i) => i);
 const columns = Array.from({ length: 5 }, (_, i) => i);
@@ -25,13 +25,17 @@ export const App = () => {
   const [grid, setGrid] = useState<string[]>(testGrid.flat(1));
   const [solved, setSolved] = useState(false);
   const [solution, setSolution] = useState<SolverState | null>(null);
-  const [boardRef, setBoardRef] = useState<HTMLDivElement | null>(null);
+  const [allowLongWords, setAllowLongWords] = useState(false);
 
   const tree = useMemo(() => {
     const trieTree = new TrieTree();
-    trieTree.insertMany(words);
+    if (allowLongWords) {
+      trieTree.insertMany(fullWords);
+    } else {
+      trieTree.insertMany(words);
+    }
     return trieTree;
-  }, []);
+  }, [allowLongWords]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>, row: number, column: number) => {
     const index = row * columns.length + column;
@@ -92,31 +96,14 @@ export const App = () => {
       width: columns.length,
       height: rows.length,
       minWordLength: 3,
-      maxWordLength: 50,
+      maxWordLength: allowLongWords ? 100 : 10,
     };
 
-    console.time("solve");
     const results = solve(game, tree);
-    console.timeEnd("solve");
     if (results.length === 0) return;
 
     setSolution(results[0]);
-    printSolution(results[0], game);
     setSolved(true);
-  };
-
-  const getCoordinates = (position: Vector2) => {
-    if (boardRef == null) return "";
-
-    const tile = boardRef.querySelector(`[data-x='${position.x}'][data-y='${position.y}']`);
-    if (tile == null) return "";
-
-    const parentRect = boardRef.getBoundingClientRect();
-    const tileRect = tile.getBoundingClientRect();
-    const tileCenterX = tileRect.x + tileRect.width / 2;
-    const tileCenterY = tileRect.y + tileRect.height / 2;
-
-    return `${tileCenterX - parentRect.x},${tileCenterY - parentRect.y}`;
   };
 
   return (
@@ -141,56 +128,25 @@ export const App = () => {
           ))}
         </div>
       )}
-      {solved && solution && (
-        <div
-          ref={(element) => setBoardRef(element)}
-          className="relative flex flex-col items-center justify-around gap-2"
-        >
-          {solution.board.map((row, y) => (
-            <div key={y} className="flex gap-2">
-              {row.map((cell, x) => (
-                <div key={`${x}-${y}`} className="tile" data-x={x} data-y={y}>
-                  <p className="z-10">{cell}</p>
-                </div>
-              ))}
-            </div>
-          ))}
-          <svg
-            className="pointer-events-none absolute inset-0 opacity-50"
-            viewBox={`0 0 ${boardRef?.getBoundingClientRect().width ?? 100} ${boardRef?.getBoundingClientRect().height ?? 100}`}
-            height="100%"
-            width="100%"
-          >
-            {solution.foundWords.map((word, index) => (
-              <polyline
-                key={index}
-                points={word.positions.map(getCoordinates).join(" ")}
-                style={{
-                  fill: "none",
-                  strokeWidth: "1rem",
-                  strokeLinecap: "round",
-                  strokeLinejoin: "round",
-                }}
-                className="stroke-gray-500"
-              />
-            ))}
-          </svg>
-        </div>
-      )}
-      {solved && solution && (
+      {solved && solution && <Solution solution={solution} />}
+      {!solved && (
         <div className="mt-8 flex gap-2">
-          {solution.foundWords.map((word, index) => (
-            <p key={index} className="text-lg font-semibold">
-              {word.word}
-            </p>
-          ))}
+          <input
+            id="allowLongWords"
+            type="checkbox"
+            checked={allowLongWords}
+            onChange={(e) => setAllowLongWords(e.target.checked)}
+          />
+          <label htmlFor="allowLongWords" className="text-lg font-semibold">
+            Salli yli 10 merkkiä pitkät sanat
+          </label>
         </div>
       )}
-      <div className="mt-8 flex gap-4">
+      <div className="mt-4 flex gap-4">
         <Button variant="secondary" onClick={clearGrid}>
           Tyhjennä
         </Button>
-        <Button disabled={!gridIsValid()} onClick={solveGrid}>
+        <Button disabled={!gridIsValid() || solved} onClick={solveGrid}>
           Ratkaise
         </Button>
       </div>

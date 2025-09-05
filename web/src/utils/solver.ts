@@ -58,9 +58,7 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
     }
   }
 
-  let iterations = 0;
   stackLoop: while (heap.size() > 0) {
-    iterations++;
     const state = heap.pop()!;
     const currentPosition = state.currentWord.positions.at(-1);
     if (!currentPosition) continue;
@@ -172,6 +170,5 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
     }
   }
 
-  console.log("iterations:", iterations);
   return results;
 };
