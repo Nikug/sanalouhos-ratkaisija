@@ -20,8 +20,15 @@ const outOfBounds = (vector: Vector2, width: number, height: number) => {
   return vector.x < 0 || vector.y < 0 || vector.x >= width || vector.y >= height;
 };
 
-const arrangementHash = (arrangement: ArrangementState) => {
-  return arrangement.usedWords.map((word) => word.positionHashes.join(",")).join(";");
+const arrangementHash = (arrangement: ArrangementState, width: number, height: number) => {
+  let hash = Array.from({ length: width * height }).fill("0");
+  for (const word of arrangement.usedWords) {
+    for (const position of word.positions) {
+      hash[position.x + position.y * width] = "1";
+    }
+  }
+
+  return hash.join("");
 };
 
 const findAllWords = (game: GameState, tree: TrieTree): Word[] => {
@@ -80,7 +87,7 @@ const findAllWords = (game: GameState, tree: TrieTree): Word[] => {
           currentWord: {
             word: newWord,
             positions: [...state.currentWord.positions, newPosition],
-            positionHashes: [...state.currentWord.positionHashes, newPositionHash].sort(),
+            positionHashes: [...state.currentWord.positionHashes, newPositionHash],
           },
           foundWords: state.foundWords,
           visited: newVisited,
@@ -92,7 +99,7 @@ const findAllWords = (game: GameState, tree: TrieTree): Word[] => {
         newVisited.add(newPositionHash);
 
         const wordPositions = [...state.currentWord.positions, newPosition];
-        const wordPositionHashes = [...state.currentWord.positionHashes, newPositionHash].sort();
+        const wordPositionHashes = [...state.currentWord.positionHashes, newPositionHash];
 
         const wordHash = wordPositionHashes.join(",");
         if (foundWords.has(wordHash)) continue;
@@ -102,6 +109,21 @@ const findAllWords = (game: GameState, tree: TrieTree): Word[] => {
           positions: wordPositions,
           positionHashes: wordPositionHashes,
         });
+
+        if (newWord.length < game.maxWordLength) {
+          const newState: SolverState = {
+            board: state.board,
+            currentWord: {
+              word: newWord,
+              positions: [...state.currentWord.positions, newPosition],
+              positionHashes: [...state.currentWord.positionHashes, newPositionHash],
+            },
+            foundWords: state.foundWords,
+            visited: newVisited,
+          };
+
+          stack.push(newState);
+        }
       }
     }
   }
@@ -140,11 +162,11 @@ const findAllValidArrangements = (game: GameState, words: Word[]): ArrangementSt
 
       const newState: ArrangementState = {
         remainingWords: possibleWords.toSpliced(i, 1),
-        usedWords: [...state.usedWords, word].sort((a, b) => (a.word > b.word ? 1 : -1)),
+        usedWords: [...state.usedWords, word],
         usedPositions: newUsedPositions,
       };
 
-      const key = arrangementHash(newState);
+      const key = arrangementHash(newState, game.width, game.height);
       if (testedArrangments.has(key)) continue;
       testedArrangments.set(key, newState);
 
@@ -171,5 +193,18 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
   console.timeEnd("find arrangements");
   console.log("arrangements:", arrangements[0]?.usedWords.map((word) => word.word).join(", "));
 
-  return [];
+  if (!arrangements[0]) return [];
+
+  return [
+    {
+      board: game.board,
+      foundWords: arrangements[0]!.usedWords,
+      currentWord: {
+        word: "",
+        positions: [{ x: 0, y: 0 }],
+        positionHashes: [],
+      },
+      visited: new Set(),
+    },
+  ];
 };

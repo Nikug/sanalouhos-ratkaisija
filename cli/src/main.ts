@@ -7,7 +7,7 @@ import { games } from "./games.ts";
 const words: string[] = wordsJson;
 
 const main = () => {
-  const game = games[2]!;
+  const game = games[0]!;
 
   console.time("tree");
   const tree = new TrieTree();
