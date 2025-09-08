@@ -6,9 +6,10 @@ import { useState } from "react";
 interface Props {
   solution: ArrangementState;
   board: Board;
+  duration: number;
 }
 
-export const Solution = ({ solution, board }: Props) => {
+export const Solution = ({ solution, board, duration }: Props) => {
   const [boardRef, setBoardRef] = useState<HTMLDivElement | null>(null);
   const [activeWord, setActiveWord] = useState<string | null>(null);
 
@@ -78,6 +79,9 @@ export const Solution = ({ solution, board }: Props) => {
             {word.word}
           </p>
         ))}
+      </div>
+      <div>
+        <p className="">Ratkaisuaika: {(duration / 1000).toFixed(2)}s</p>
       </div>
     </>
   );

@@ -1,42 +1,60 @@
-import { useMemo, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Button } from "./components/Button";
 import words from "./assets/words.json";
 import fullWords from "./assets/fullWords.json";
-import { TrieTree } from "./utils/tree";
-import { solve } from "./utils/solver";
 import type { ArrangementState, GameState } from "./types/types";
 import { Solution } from "./components/Solution";
+import { LoadingDots } from "./components/LoadingDots";
 
 const rows = Array.from({ length: 6 }, (_, i) => i);
 const columns = Array.from({ length: 5 }, (_, i) => i);
 const emptyGrid = () => Array.from({ length: rows.length * columns.length }, () => "");
 const allowedCharacters = "abcdefghijklmnopqrstuvwxyzåäö";
 
+type SolveState = "init" | "solving" | "solved";
+
 const testGrid = [
-  ["r", "ö", "k", "r", "ä"],
-  ["ä", "y", "y", "t", "j"],
-  ["h", "p", "v", "ä", "t"],
-  ["a", "d", "ä", "r", "i"],
-  ["y", "k", "k", "h", "e"],
-  ["s", "i", "a", "v", "a"],
+  ["u", "p", "i", "o", "e"],
+  ["p", "l", "u", "s", "e"],
+  ["l", "a", "k", "p", "a"],
+  ["k", "a", "t", "b", "i"],
+  ["l", "k", "t", "l", "a"],
+  ["i", "a", "i", "a", "s"],
 ];
 
 export const App = () => {
   const [grid, setGrid] = useState<string[]>(testGrid.flat(1));
-  const [solved, setSolved] = useState(false);
+  const [solveState, setSolveState] = useState<SolveState>("init");
   const [game, setGame] = useState<GameState | null>(null);
   const [solution, setSolution] = useState<ArrangementState | null>(null);
+  const [solveStart, setSolveStart] = useState<number>(0);
+  const [solveEnd, setSolveEnd] = useState<number>(0);
   const [allowLongWords, setAllowLongWords] = useState(false);
 
-  const tree = useMemo(() => {
-    const trieTree = new TrieTree();
-    if (allowLongWords) {
-      trieTree.insertMany(fullWords);
-    } else {
-      trieTree.insertMany(words);
-    }
-    return trieTree;
-  }, [allowLongWords]);
+  const solveDuration = solveEnd - solveStart;
+
+  const worker = useRef<Worker>(
+    new Worker(new URL("./workers/solverWorker.ts", import.meta.url), { type: "module" }),
+  );
+
+  useEffect(() => {
+    if (!window.Worker) return;
+
+    worker.current.onmessage = (event: MessageEvent<ArrangementState[]>) => {
+      const solution = event.data[0];
+      if (solution == null) return;
+
+      if (event.data[0]) {
+        setSolution(event.data[0]);
+        setSolveState("solved");
+        setSolveEnd(performance.now());
+      } else {
+        setSolution(null);
+        setSolveState("init");
+        setSolveEnd(performance.now());
+      }
+    };
+  }, [worker]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>, row: number, column: number) => {
     const index = row * columns.length + column;
@@ -75,7 +93,7 @@ export const App = () => {
 
   const clearGrid = () => {
     setGrid(emptyGrid());
-    setSolved(false);
+    setSolveState("init");
   };
 
   const gridIsValid = () => {
@@ -100,18 +118,16 @@ export const App = () => {
       maxWordLength: allowLongWords ? 100 : 10,
     };
 
-    const results = solve(game, tree);
-    if (results.length === 0) return;
-
     setGame(game);
-    setSolution(results[0]);
-    setSolved(true);
+    setSolveState("solving");
+    setSolveStart(performance.now());
+    worker.current.postMessage({ game, words: allowLongWords ? fullWords : words });
   };
 
   return (
     <div className="flex min-h-screen flex-col items-center bg-emerald-50 p-8 text-emerald-800">
       <h1 className="mb-8 text-center text-4xl font-bold">Sanalouhos-ratkaisija</h1>
-      {!solved && (
+      {(solveState === "init" || solveState === "solving") && (
         <div className="flex flex-col items-center justify-around gap-2">
           {rows.map((row) => (
             <div key={row} className="flex gap-2">
@@ -130,8 +146,18 @@ export const App = () => {
           ))}
         </div>
       )}
-      {solved && solution && game && <Solution solution={solution} board={game.board} />}
-      {!solved && (
+      {solveState === "solving" && (
+        <div className="mt-4 flex flex-col items-center">
+          <p>Ratkaistaan</p>
+          <span className="text-lg font-semibold">
+            <LoadingDots />
+          </span>
+        </div>
+      )}
+      {solveState === "solved" && solution && game && (
+        <Solution solution={solution} board={game.board} duration={solveDuration} />
+      )}
+      {solveState === "init" && (
         <div className="mt-8 flex gap-2">
           <input
             id="allowLongWords"
@@ -148,7 +174,7 @@ export const App = () => {
         <Button variant="secondary" onClick={clearGrid}>
           Tyhjennä
         </Button>
-        <Button disabled={!gridIsValid() || solved} onClick={solveGrid}>
+        <Button disabled={!gridIsValid() || solveState !== "init"} onClick={solveGrid}>
           Ratkaise
         </Button>
       </div>
