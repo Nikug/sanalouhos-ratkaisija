@@ -4,7 +4,7 @@ import words from "./assets/words.json";
 import fullWords from "./assets/fullWords.json";
 import { TrieTree } from "./utils/tree";
 import { solve } from "./utils/solver";
-import type { SolverState } from "./types/types";
+import type { ArrangementState, GameState } from "./types/types";
 import { Solution } from "./components/Solution";
 
 const rows = Array.from({ length: 6 }, (_, i) => i);
@@ -24,7 +24,8 @@ const testGrid = [
 export const App = () => {
   const [grid, setGrid] = useState<string[]>(testGrid.flat(1));
   const [solved, setSolved] = useState(false);
-  const [solution, setSolution] = useState<SolverState | null>(null);
+  const [game, setGame] = useState<GameState | null>(null);
+  const [solution, setSolution] = useState<ArrangementState | null>(null);
   const [allowLongWords, setAllowLongWords] = useState(false);
 
   const tree = useMemo(() => {
@@ -102,6 +103,7 @@ export const App = () => {
     const results = solve(game, tree);
     if (results.length === 0) return;
 
+    setGame(game);
     setSolution(results[0]);
     setSolved(true);
   };
@@ -128,7 +130,7 @@ export const App = () => {
           ))}
         </div>
       )}
-      {solved && solution && <Solution solution={solution} />}
+      {solved && solution && game && <Solution solution={solution} board={game.board} />}
       {!solved && (
         <div className="mt-8 flex gap-2">
           <input

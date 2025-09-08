@@ -1,13 +1,14 @@
 /* eslint-disable @eslint-react/no-array-index-key */
-import type { SolverState, Vector2 } from "@/types/types";
+import type { ArrangementState, Board, Vector2 } from "@/types/types";
 import clsx from "clsx";
 import { useState } from "react";
 
 interface Props {
-  solution: SolverState;
+  solution: ArrangementState;
+  board: Board;
 }
 
-export const Solution = ({ solution }: Props) => {
+export const Solution = ({ solution, board }: Props) => {
   const [boardRef, setBoardRef] = useState<HTMLDivElement | null>(null);
   const [activeWord, setActiveWord] = useState<string | null>(null);
 
@@ -31,7 +32,7 @@ export const Solution = ({ solution }: Props) => {
         ref={(element) => setBoardRef(element)}
         className="relative flex flex-col items-center justify-around gap-2"
       >
-        {solution.board.map((row, y) => (
+        {board.map((row, y) => (
           <div key={y} className="flex gap-2">
             {row.map((cell, x) => (
               <div key={`${x}-${y}`} className="tile" data-x={x} data-y={y}>
@@ -46,7 +47,7 @@ export const Solution = ({ solution }: Props) => {
           height="100%"
           width="100%"
         >
-          {solution.foundWords.map((word, index) => (
+          {solution.usedWords.map((word, index) => (
             <polyline
               key={index}
               points={word.positions.map(getCoordinates).join(" ")}
@@ -66,7 +67,7 @@ export const Solution = ({ solution }: Props) => {
         </svg>
       </div>
       <div className="mt-8 mb-4 flex gap-2">
-        {solution.foundWords.map((word, index) => (
+        {solution.usedWords.map((word, index) => (
           <p
             key={index}
             className={clsx("cursor-pointer text-lg font-semibold select-none", {

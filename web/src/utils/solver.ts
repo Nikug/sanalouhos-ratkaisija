@@ -1,6 +1,5 @@
 import type { TrieTree } from "./tree.ts";
-import type { Board, GameState, SolverState, Vector2 } from "../types/types.ts";
-import Heap from "heap";
+import type { ArrangementState, GameState, SolverState, Vector2, Word } from "../types/types.ts";
 
 const directions: Vector2[] = [
   { x: 0, y: -1 }, // up,
@@ -21,36 +20,30 @@ const outOfBounds = (vector: Vector2, width: number, height: number) => {
   return vector.x < 0 || vector.y < 0 || vector.x >= width || vector.y >= height;
 };
 
-const findAllEmptyCells = (board: Board, visited: Set<string>): Vector2[] => {
-  const result: Vector2[] = [];
-  const height = board.length;
-  const width = board[0]!.length;
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const position = { x, y };
-      if (!visited.has(vectorHash(position))) {
-        result.push(position);
-      }
+const arrangementHash = (arrangement: ArrangementState, width: number, height: number) => {
+  const hash = Array.from({ length: width * height }).fill("0");
+  for (const word of arrangement.usedWords) {
+    for (const position of word.positions) {
+      hash[position.x + position.y * width] = "1";
     }
   }
 
-  return result;
+  return hash.join("");
 };
 
-export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
-  const heap = new Heap<SolverState>((a, b) => {
-    // Prioritize states with overall longer words
-    const aValue = a.visited.size / a.foundWords.length;
-    const bValue = b.visited.size / b.foundWords.length;
-    return bValue - aValue;
-  });
-  const results: SolverState[] = [];
+const findAllWords = (game: GameState, tree: TrieTree): Word[] => {
+  const stack: SolverState[] = [];
+  const foundWords: Map<string, Word> = new Map();
 
+  // Initialize stack with all starting positions
   for (let y = 0; y < game.height; y++) {
     for (let x = 0; x < game.width; x++) {
-      heap.push({
-        currentWord: { word: game.board[y]![x]!, positions: [{ x, y }] },
+      stack.push({
+        currentWord: {
+          word: game.board[y]![x]!,
+          positions: [{ x, y }],
+          positionHashes: [vectorHash({ x, y })],
+        },
         foundWords: [],
         board: game.board,
         visited: new Set([vectorHash({ x, y })]),
@@ -58,8 +51,8 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
     }
   }
 
-  stackLoop: while (heap.size() > 0) {
-    const state = heap.pop()!;
+  while (stack.length > 0) {
+    const state = stack.pop()!;
     const currentPosition = state.currentWord.positions.at(-1);
     if (!currentPosition) continue;
 
@@ -89,86 +82,109 @@ export const solve = (game: GameState, tree: TrieTree): SolverState[] => {
         newVisited = new Set(state.visited);
         newVisited.add(newPositionHash);
 
-        // Board is full, but last word is partial, continue
-        if (newVisited.size === game.height * game.width) {
-          continue directionLoop;
-        }
-
         const newState: SolverState = {
           board: state.board,
           currentWord: {
             word: newWord,
             positions: [...state.currentWord.positions, newPosition],
+            positionHashes: [...state.currentWord.positionHashes, newPositionHash],
           },
           foundWords: state.foundWords,
           visited: newVisited,
         };
 
-        heap.push(newState);
+        stack.push(newState);
       } else if (wordType === "word") {
         newVisited = new Set(state.visited);
         newVisited.add(newPositionHash);
 
-        // Board is full, last word is valid word
-        // Add to results and continue
-        if (newVisited.size === game.height * game.width) {
-          const wordPositions = [...state.currentWord.positions];
-          wordPositions.push(newPosition);
+        const wordPositions = [...state.currentWord.positions, newPosition];
+        const wordPositionHashes = [...state.currentWord.positionHashes, newPositionHash];
 
-          const newState: SolverState = {
-            board: state.board,
-            currentWord: {
-              word: "",
-              positions: [{ x: 0, y: 0 }],
-            },
-            foundWords: [...state.foundWords, { word: newWord, positions: wordPositions }],
-            visited: newVisited,
-          };
-          results.push(newState);
-          break stackLoop;
-        }
+        const wordHash = wordPositionHashes.join(",");
+        if (foundWords.has(wordHash)) continue;
 
-        // Add states for all remaining empty cells
-        const wordPositions = [...state.currentWord.positions];
-        wordPositions.push(newPosition);
+        foundWords.set(wordHash, {
+          word: newWord,
+          positions: wordPositions,
+          positionHashes: wordPositionHashes,
+        });
 
-        const emptyCells = findAllEmptyCells(game.board, newVisited);
-        for (const nextStartPosition of emptyCells) {
-          const nextStartCharacter = game.board[nextStartPosition.y]![nextStartPosition.x]!;
-          const nextStartVisited = new Set(newVisited);
-          nextStartVisited.add(vectorHash(nextStartPosition));
-
-          const newState: SolverState = {
-            board: state.board,
-            currentWord: {
-              word: nextStartCharacter,
-              positions: [nextStartPosition],
-            },
-            foundWords: [...state.foundWords, { word: newWord, positions: wordPositions }],
-            visited: nextStartVisited,
-          };
-
-          heap.push(newState);
-        }
-
-        // We found word, but it is not max length
-        // Continue building this word to be longer
         if (newWord.length < game.maxWordLength) {
           const newState: SolverState = {
             board: state.board,
             currentWord: {
               word: newWord,
               positions: [...state.currentWord.positions, newPosition],
+              positionHashes: [...state.currentWord.positionHashes, newPositionHash],
             },
             foundWords: state.foundWords,
             visited: newVisited,
           };
 
-          heap.push(newState);
+          stack.push(newState);
         }
       }
     }
   }
 
+  return Array.from(foundWords.values());
+};
+
+const findAllValidArrangements = (game: GameState, words: Word[]): ArrangementState[] => {
+  const results: ArrangementState[] = [];
+
+  const sortedWords = words.toSorted((a, b) => a.word.length - b.word.length);
+
+  const stack: ArrangementState[] = [];
+  stack.push({
+    remainingWords: sortedWords,
+    usedWords: [],
+    usedPositions: new Set(),
+  });
+
+  const testedArrangments: Map<string, ArrangementState> = new Map();
+
+  while (stack.length > 0) {
+    const state = stack.pop()!;
+
+    const possibleWords = state.remainingWords.filter(
+      (word) =>
+        word.word.length + state.usedPositions.size <= game.width * game.height &&
+        word.positionHashes.every((hash) => !state.usedPositions.has(hash)),
+    );
+
+    for (let i = 0; i < possibleWords.length; i++) {
+      const word = { ...possibleWords[i]! };
+
+      const newUsedPositions = new Set(state.usedPositions);
+      word.positionHashes.forEach((hash) => newUsedPositions.add(hash));
+
+      const newState: ArrangementState = {
+        remainingWords: possibleWords.toSpliced(i, 1),
+        usedWords: [...state.usedWords, word],
+        usedPositions: newUsedPositions,
+      };
+
+      const key = arrangementHash(newState, game.width, game.height);
+      if (testedArrangments.has(key)) continue;
+      testedArrangments.set(key, newState);
+
+      if (newUsedPositions.size === game.height * game.width) {
+        results.push(newState);
+        return results;
+      } else {
+        stack.push(newState);
+      }
+    }
+  }
+
   return results;
+};
+
+export const solve = (game: GameState, tree: TrieTree): ArrangementState[] => {
+  const foundWords = findAllWords(game, tree);
+  const arrangements = findAllValidArrangements(game, foundWords);
+
+  return arrangements;
 };
