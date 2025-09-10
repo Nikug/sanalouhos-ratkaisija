@@ -8,7 +8,7 @@ import { LoadingDots } from "./components/LoadingDots";
 import { InputGrid } from "./components/InputGrid";
 import { allowedCharacters, columns, emptyGrid, rows } from "./constants";
 
-type SolveState = "init" | "solving" | "solved";
+type SolveState = "init" | "solving" | "solved" | "unsolved";
 
 export const App = () => {
   const [grid, setGrid] = useState<string[]>(emptyGrid);
@@ -29,15 +29,13 @@ export const App = () => {
     });
     worker.onmessage = (event: MessageEvent<ArrangementState[]>) => {
       const solution = event.data[0];
-      if (solution == null) return;
-
-      if (event.data[0]) {
-        setSolution(event.data[0]);
+      if (solution) {
+        setSolution(solution);
         setSolveState("solved");
         setSolveEnd(performance.now());
       } else {
         setSolution(null);
-        setSolveState("init");
+        setSolveState("unsolved");
         setSolveEnd(performance.now());
       }
     };
@@ -106,7 +104,7 @@ export const App = () => {
         </a>
       </div>
 
-      {(solveState === "init" || solveState === "solving") && (
+      {(solveState === "init" || solveState === "solving" || solveState === "unsolved") && (
         <InputGrid grid={grid} setGrid={setGrid} />
       )}
       {solveState === "solving" && (
@@ -115,6 +113,11 @@ export const App = () => {
           <span className="text-lg font-semibold">
             <LoadingDots />
           </span>
+        </div>
+      )}
+      {solveState === "unsolved" && (
+        <div className="mt-4 flex flex-col items-center">
+          <p>Ratkaisua ei löytynyt</p>
         </div>
       )}
       {solveState === "solved" && solution && game && (
@@ -142,6 +145,11 @@ export const App = () => {
         {solveState === "solved" && (
           <Button variant="secondary" onClick={closeSolution}>
             Sulje ratkaisu
+          </Button>
+        )}
+        {solveState === "unsolved" && (
+          <Button variant="secondary" onClick={closeSolution}>
+            Sulje
           </Button>
         )}
         {solveState === "init" && (
