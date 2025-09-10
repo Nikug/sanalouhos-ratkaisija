@@ -155,7 +155,7 @@ const findAllValidArrangements = (game: GameState, words: Word[]): ArrangementSt
     );
 
     for (let i = 0; i < possibleWords.length; i++) {
-      const word = { ...possibleWords[i]! };
+      const word = possibleWords[i]!;
 
       const newUsedPositions = new Set(state.usedPositions);
       word.positionHashes.forEach((hash) => newUsedPositions.add(hash));
