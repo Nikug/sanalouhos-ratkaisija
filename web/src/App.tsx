@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useCallback, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Button } from "./components/Button";
 import words from "./assets/words.json";
 import fullWords from "./assets/fullWords.json";
@@ -33,14 +33,13 @@ export const App = () => {
 
   const solveDuration = solveEnd - solveStart;
 
-  const worker = useRef<Worker>(
-    new Worker(new URL("./workers/solverWorker.ts", import.meta.url), { type: "module" }),
-  );
-
-  useEffect(() => {
+  const createWorker = useCallback(() => {
     if (!window.Worker) return;
 
-    worker.current.onmessage = (event: MessageEvent<ArrangementState[]>) => {
+    const worker = new Worker(new URL("./workers/solverWorker.ts", import.meta.url), {
+      type: "module",
+    });
+    worker.onmessage = (event: MessageEvent<ArrangementState[]>) => {
       const solution = event.data[0];
       if (solution == null) return;
 
@@ -54,7 +53,11 @@ export const App = () => {
         setSolveEnd(performance.now());
       }
     };
-  }, [worker]);
+
+    return worker;
+  }, []);
+
+  const worker = useRef<Worker>(createWorker());
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>, row: number, column: number) => {
     const index = row * columns.length + column;
@@ -121,7 +124,18 @@ export const App = () => {
     setGame(game);
     setSolveState("solving");
     setSolveStart(performance.now());
-    worker.current.postMessage({ game, words: allowLongWords ? fullWords : words });
+    worker.current?.postMessage({ game, words: allowLongWords ? fullWords : words, type: "solve" });
+  };
+
+  const cancelSolve = () => {
+    worker.current?.terminate();
+    worker.current = createWorker();
+    setSolveState("init");
+  };
+
+  const closeSolution = () => {
+    setSolution(null);
+    setSolveState("init");
   };
 
   return (
@@ -171,12 +185,26 @@ export const App = () => {
         </div>
       )}
       <div className="mt-4 flex gap-4">
-        <Button variant="secondary" onClick={clearGrid}>
-          Tyhjennä
-        </Button>
-        <Button disabled={!gridIsValid() || solveState !== "init"} onClick={solveGrid}>
-          Ratkaise
-        </Button>
+        {solveState === "solving" && (
+          <Button variant="secondary" onClick={cancelSolve}>
+            Peruuta
+          </Button>
+        )}
+        {solveState === "solved" && (
+          <Button variant="secondary" onClick={closeSolution}>
+            Sulje ratkaisu
+          </Button>
+        )}
+        {solveState === "init" && (
+          <Button variant="secondary" onClick={clearGrid}>
+            Tyhjennä
+          </Button>
+        )}
+        {solveState === "init" && (
+          <Button disabled={!gridIsValid()} onClick={solveGrid}>
+            Ratkaise
+          </Button>
+        )}
       </div>
     </div>
   );

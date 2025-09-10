@@ -3,6 +3,7 @@ import { solve } from "@/utils/solver";
 import { TrieTree } from "@/utils/tree";
 
 export interface SolverWorkerMessage {
+  type: "solve";
   game: GameState;
   words: string[];
 }
