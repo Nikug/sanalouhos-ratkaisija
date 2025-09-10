@@ -1,29 +1,17 @@
-import { useCallback, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "./components/Button";
 import words from "./assets/words.json";
 import fullWords from "./assets/fullWords.json";
 import type { ArrangementState, GameState } from "./types/types";
 import { Solution } from "./components/Solution";
 import { LoadingDots } from "./components/LoadingDots";
-
-const rows = Array.from({ length: 6 }, (_, i) => i);
-const columns = Array.from({ length: 5 }, (_, i) => i);
-const emptyGrid = () => Array.from({ length: rows.length * columns.length }, () => "");
-const allowedCharacters = "abcdefghijklmnopqrstuvwxyzåäö";
+import { InputGrid } from "./components/InputGrid";
+import { allowedCharacters, columns, emptyGrid, rows } from "./constants";
 
 type SolveState = "init" | "solving" | "solved";
 
-const testGrid = [
-  ["u", "p", "i", "o", "e"],
-  ["p", "l", "u", "s", "e"],
-  ["l", "a", "k", "p", "a"],
-  ["k", "a", "t", "b", "i"],
-  ["l", "k", "t", "l", "a"],
-  ["i", "a", "i", "a", "s"],
-];
-
 export const App = () => {
-  const [grid, setGrid] = useState<string[]>(testGrid.flat(1));
+  const [grid, setGrid] = useState<string[]>(emptyGrid);
   const [solveState, setSolveState] = useState<SolveState>("init");
   const [game, setGame] = useState<GameState | null>(null);
   const [solution, setSolution] = useState<ArrangementState | null>(null);
@@ -57,42 +45,7 @@ export const App = () => {
     return worker;
   }, []);
 
-  const worker = useRef<Worker>(createWorker());
-
-  const handleChange = (event: ChangeEvent<HTMLInputElement>, row: number, column: number) => {
-    const index = row * columns.length + column;
-    if (event.target.value.length > 0) {
-      const lastCharacter = event.target.value.at(-1)!;
-      const lowerCaseCharacter = lastCharacter.toLowerCase();
-      if (!allowedCharacters.includes(lowerCaseCharacter)) return;
-
-      setGrid((prev) => prev.with(index, lowerCaseCharacter));
-
-      // Move focus to next input
-      if (event.target.nextSibling?.nodeName === "INPUT") {
-        const input = event.target.nextSibling as HTMLInputElement;
-        input.focus();
-      } else if (event.target.parentElement?.nextSibling?.firstChild?.nodeName === "INPUT") {
-        const input = event.target.parentElement.nextSibling.firstChild as HTMLInputElement;
-        input.focus();
-      }
-    }
-  };
-
-  const handleBackspace = (event: KeyboardEvent<HTMLInputElement>, row: number, column: number) => {
-    if (event.key !== "Backspace") return;
-    setGrid((prev) => prev.with(row * columns.length + column, ""));
-
-    // Move focus to previous input
-    const target = event.currentTarget;
-    if (target.previousSibling?.nodeName === "INPUT") {
-      const input = target.previousSibling as HTMLInputElement;
-      input.focus();
-    } else if (target.parentElement?.previousSibling?.lastChild?.nodeName === "INPUT") {
-      const input = target.parentElement.previousSibling.lastChild as HTMLInputElement;
-      input.focus();
-    }
-  };
+  const [worker, setWorker] = useState<Worker | undefined>(createWorker);
 
   const clearGrid = () => {
     setGrid(emptyGrid());
@@ -124,12 +77,12 @@ export const App = () => {
     setGame(game);
     setSolveState("solving");
     setSolveStart(performance.now());
-    worker.current?.postMessage({ game, words: allowLongWords ? fullWords : words, type: "solve" });
+    worker?.postMessage({ game, words: allowLongWords ? fullWords : words, type: "solve" });
   };
 
   const cancelSolve = () => {
-    worker.current?.terminate();
-    worker.current = createWorker();
+    worker?.terminate();
+    setWorker(createWorker());
     setSolveState("init");
   };
 
@@ -140,25 +93,21 @@ export const App = () => {
 
   return (
     <div className="flex min-h-screen flex-col items-center bg-emerald-50 p-8 text-emerald-800">
-      <h1 className="mb-8 text-center text-4xl font-bold">Sanalouhos-ratkaisija</h1>
+      <h1 className="text-center text-4xl font-bold">Sanalouhos-ratkaisija</h1>
+      <div className="mb-8 flex gap-1 text-sm">
+        <a className="underline" href="https://github.com/Nikug/sanalouhos-ratkaisija">
+          Github
+        </a>
+        <a className="underline" href="https://www.hs.fi/pelit/art-2000010229611.html">
+          Sanalouhos
+        </a>
+        <a className="underline" href="https://www.kielitoimistonsanakirja.fi/#/">
+          Kielitoimiston sanakirja
+        </a>
+      </div>
+
       {(solveState === "init" || solveState === "solving") && (
-        <div className="flex flex-col items-center justify-around gap-2">
-          {rows.map((row) => (
-            <div key={row} className="flex gap-2">
-              {columns.map((column) => (
-                <input
-                  type="text"
-                  key={`${row}-${column}`}
-                  className="tile"
-                  value={grid[row * columns.length + column] || ""}
-                  onChange={(e) => handleChange(e, row, column)}
-                  onKeyDown={(e) => handleBackspace(e, row, column)}
-                  onClick={(e) => e.currentTarget.select()}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        <InputGrid grid={grid} setGrid={setGrid} />
       )}
       {solveState === "solving" && (
         <div className="mt-4 flex flex-col items-center">
