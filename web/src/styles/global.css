@@ -2,6 +2,6 @@
 
 @layer components {
   .tile {
-    @apply h-16 w-16 flex justify-center items-center rounded-xl border-2 bg-emerald-100 text-center text-xl font-bold uppercase
+    @apply min-w-4 h-16 w-16 flex justify-center items-center rounded-xl border-2 bg-emerald-100 text-center text-xl font-bold uppercase
   }
 }

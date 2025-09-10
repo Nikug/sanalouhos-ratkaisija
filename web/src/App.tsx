@@ -90,7 +90,7 @@ export const App = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-emerald-50 p-8 text-emerald-800">
+    <div className="flex min-h-screen w-screen min-w-0 flex-col items-center bg-emerald-50 p-8 text-emerald-800">
       <h1 className="text-center text-4xl font-bold">Sanalouhos-ratkaisija</h1>
       <div className="mb-8 flex gap-1 text-sm">
         <a className="underline" href="https://github.com/Nikug/sanalouhos-ratkaisija">

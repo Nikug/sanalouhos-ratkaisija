@@ -43,9 +43,9 @@ export const InputGrid = ({ grid, setGrid }: Props) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-around gap-2">
+    <div className="flex w-full flex-col items-center justify-around gap-2">
       {rows.map((row) => (
-        <div key={row} className="flex gap-2">
+        <div key={row} className="flex w-full justify-center gap-2">
           {columns.map((column) => (
             <input
               type="text"

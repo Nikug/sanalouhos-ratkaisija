@@ -31,10 +31,10 @@ export const Solution = ({ solution, board, duration }: Props) => {
     <>
       <div
         ref={(element) => setBoardRef(element)}
-        className="relative flex flex-col items-center justify-around gap-2"
+        className="relative flex w-full flex-col items-center justify-around gap-2"
       >
         {board.map((row, y) => (
-          <div key={y} className="flex gap-2">
+          <div key={y} className="flex w-full justify-center gap-2">
             {row.map((cell, x) => (
               <div key={`${x}-${y}`} className="tile" data-x={x} data-y={y}>
                 <p className="z-10">{cell}</p>
@@ -67,7 +67,7 @@ export const Solution = ({ solution, board, duration }: Props) => {
           ))}
         </svg>
       </div>
-      <div className="mt-8 mb-4 flex gap-2">
+      <div className="mt-8 mb-4 flex flex-wrap gap-2">
         {solution.usedWords.map((word, index) => (
           <p
             key={index}
