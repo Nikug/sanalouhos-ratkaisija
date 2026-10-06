@@ -1,5 +1,5 @@
 import type { GameState } from "@/types/types";
-import { solve } from "@/utils/solver";
+import { solve } from "@/utils/solver2";
 import { TrieTree } from "@/utils/tree";
 
 export interface SolverWorkerMessage {
