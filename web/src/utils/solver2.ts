@@ -18,9 +18,7 @@ const directions: Vector2[] = [
 const bitPositions = Array.from({ length: 30 }).map((_, i) => 2 ** i);
 
 const vectorHash = (vector: Vector2, gridSize: Vector2) => {
-  const hash = bitPositions[vector.x + vector.y * gridSize.x];
-  if (hash == null) throw new Error("Vector hash overflow");
-  return hash;
+  return bitPositions[vector.x + vector.y * gridSize.x];
 };
 
 const outOfBounds = (vector: Vector2, width: number, height: number) => {
@@ -29,10 +27,7 @@ const outOfBounds = (vector: Vector2, width: number, height: number) => {
 
 const arrangementHash = (arrangement: ArrangementState) => {
   let hash = 0;
-  for (const word of arrangement.usedWords) {
-    hash |= word.positionHash;
-  }
-
+  arrangement.usedWords.forEach((word) => (hash |= word.positionHash));
   return hash;
 };
 
