@@ -1,3 +1,5 @@
+// Optimized solver that uses bit operations for speedup
+
 import type { TrieTree } from "./tree.ts";
 import type { ArrangementState, GameState, SolverState, Vector2, Word } from "../types/types2.ts";
 
@@ -12,25 +14,26 @@ const directions: Vector2[] = [
   { x: -1, y: -1 }, //up left
 ];
 
-const bitPositions = Array.from({ length: 32 }).map((_, i) => 2 ** i);
+// js bit operations operate on 32bit integers, we can fit all grid positions in 30 bits
+const bitPositions = Array.from({ length: 30 }).map((_, i) => 2 ** i);
 
 const vectorHash = (vector: Vector2, gridSize: Vector2) => {
-  return bitPositions[vector.x + vector.y * gridSize.x];
+  const hash = bitPositions[vector.x + vector.y * gridSize.x];
+  if (hash == null) throw new Error("Vector hash overflow");
+  return hash;
 };
 
 const outOfBounds = (vector: Vector2, width: number, height: number) => {
   return vector.x < 0 || vector.y < 0 || vector.x >= width || vector.y >= height;
 };
 
-const arrangementHash = (arrangement: ArrangementState, width: number, height: number) => {
-  const hash = Array.from({ length: width * height }).fill("0");
+const arrangementHash = (arrangement: ArrangementState) => {
+  let hash = 0;
   for (const word of arrangement.usedWords) {
-    for (const position of word.positions) {
-      hash[position.x + position.y * width] = "1";
-    }
+    hash |= word.positionHash;
   }
 
-  return hash.join("");
+  return hash;
 };
 
 const findAllWords = (game: GameState, tree: TrieTree): Word[] => {
@@ -133,7 +136,7 @@ const findAllWords = (game: GameState, tree: TrieTree): Word[] => {
   return Array.from(foundWords.values());
 };
 
-const findAllValidArrangements = (game: GameState, words: Word[]): ArrangementState[] => {
+const findValidArrangement = (game: GameState, words: Word[]): ArrangementState[] => {
   const results: ArrangementState[] = [];
   const gridCellCount = game.width * game.height;
 
@@ -147,7 +150,7 @@ const findAllValidArrangements = (game: GameState, words: Word[]): ArrangementSt
     usedCount: 0,
   });
 
-  const testedArrangments: Map<string, ArrangementState> = new Map();
+  const testedArrangments: Map<number, ArrangementState> = new Map();
 
   while (stack.length > 0) {
     const state = stack.pop()!;
@@ -160,7 +163,6 @@ const findAllValidArrangements = (game: GameState, words: Word[]): ArrangementSt
 
     for (let i = 0; i < possibleWords.length; i++) {
       const word = possibleWords[i]!;
-
       const newUsedPositions = state.usedPositions | word.positionHash;
 
       const newState: ArrangementState = {
@@ -170,14 +172,14 @@ const findAllValidArrangements = (game: GameState, words: Word[]): ArrangementSt
         usedCount: state.usedCount + word.word.length,
       };
 
-      const key = arrangementHash(newState, game.width, game.height);
+      const key = arrangementHash(newState);
       if (testedArrangments.has(key)) continue;
       testedArrangments.set(key, newState);
 
       if (newState.usedCount === gridCellCount) {
         results.push(newState);
-        return results;
-      } else {
+        return results; // Return on first solution
+      } else if (gridCellCount - newState.usedCount >= game.minWordLength) {
         stack.push(newState);
       }
     }
@@ -187,8 +189,9 @@ const findAllValidArrangements = (game: GameState, words: Word[]): ArrangementSt
 };
 
 export const solve = (game: GameState, tree: TrieTree): ArrangementState[] => {
+  performance.now();
   const foundWords = findAllWords(game, tree);
-  const arrangements = findAllValidArrangements(game, foundWords);
+  const arrangements = findValidArrangement(game, foundWords);
 
   return arrangements;
 };
